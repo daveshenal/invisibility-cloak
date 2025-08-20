@@ -1,5 +1,7 @@
 # 🧙‍♂️ Invisibility Cloak Project 🪄
 
+![Work in Progress](https://img.shields.io/badge/status-WIP-orange)
+
 A classic invisibility cloak implementation using OpenCV and Python. This project captures a background image from your webcam and then makes objects of a specific color (like a green cloth) appear "invisible" by replacing them with the background in real-time.
 
 ## ✨ Features
