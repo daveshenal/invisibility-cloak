@@ -1,13 +1,6 @@
-"""
-Cloak detection and masking module for the invisibility cloak project.
-
-This module handles the detection of the cloak color, generation of masks,
-and application of morphological operations to refine the detection.
-"""
-
 import cv2
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple
 
 
 class CloakDetector:
