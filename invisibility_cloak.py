@@ -1,7 +1,6 @@
 """
 Main invisibility cloak application.
 """
-
 import cv2
 import numpy as np
 import os
@@ -21,7 +20,9 @@ class InvisibilityCloak:
     and real-time video processing to create the invisibility effect.
     """
     
-    def __init__(self, cloak_color: str = "green", camera_index: int = 0):
+    def __init__(self, cloak_color: str = "green", camera_index: int = 0,
+                 width: int = 640, height: int = 480, fps: int = 30,
+                 quality: str = "high"):
         """
         Initialize the invisibility cloak application.
         
@@ -35,10 +36,47 @@ class InvisibilityCloak:
         self.cloak_detector = None
         self.background = None
         self.is_running = False
+        self.width = width
+        self.height = height
+        self.fps_target = fps
+        self.quality = quality
         
         # Initialize cloak detector
         try:
-            self.cloak_detector = create_detector_for_color(cloak_color)
+            # Choose smoothing parameters for high quality
+            if quality == "ultra":
+                kernel_size = 9
+                erosion_iter = 1
+                dilation_iter = 2
+                min_area = 500
+                smooth_kernel = 41
+            elif quality == "high":
+                kernel_size = 7
+                erosion_iter = 1
+                dilation_iter = 1
+                min_area = 200
+                smooth_kernel = 31
+            elif quality == "medium":
+                kernel_size = 5
+                erosion_iter = 1
+                dilation_iter = 1
+                min_area = 100
+                smooth_kernel = 21
+            else:
+                kernel_size = 5
+                erosion_iter = 1
+                dilation_iter = 1
+                min_area = 0
+                smooth_kernel = 15
+
+            self.cloak_detector = create_detector_for_color(
+                cloak_color,
+                kernel_size=kernel_size,
+                erosion_iterations=erosion_iter,
+                dilation_iterations=dilation_iter,
+                min_component_area=min_area,
+                smooth_kernel_size=smooth_kernel,
+            )
             print(f"Initialized cloak detector for {cloak_color} color")
         except ValueError as e:
             print(f"Error: {e}")
@@ -279,6 +317,14 @@ def main():
                        help="Color of the cloak to detect (default: green)")
     parser.add_argument("--camera", "-cam", type=int, default=0,
                        help="Camera index to use (default: 0)")
+    parser.add_argument("--width", type=int, default=1280,
+                       help="Capture width (default: 1280)")
+    parser.add_argument("--height", type=int, default=720,
+                       help="Capture height (default: 720)")
+    parser.add_argument("--fps", type=int, default=30,
+                       help="Capture FPS target (default: 30)")
+    parser.add_argument("--quality", choices=["ultra", "high", "medium", "low"], default="high",
+                       help="Mask smoothing quality (default: high)")
     parser.add_argument("--background", "-b", type=str,
                        help="Path to background image file")
     
@@ -286,7 +332,14 @@ def main():
     
     # Create and run the invisibility cloak application
     try:
-        app = InvisibilityCloak(cloak_color=args.color, camera_index=args.camera)
+        app = InvisibilityCloak(
+            cloak_color=args.color,
+            camera_index=args.camera,
+            width=args.width,
+            height=args.height,
+            fps=args.fps,
+            quality=args.quality,
+        )
         
         # Load background if specified
         if args.background:
