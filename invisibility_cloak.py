@@ -32,7 +32,7 @@ class InvisibilityCloak:
         """
         self.camera_index = camera_index
         self.cap = None
-        self.background_capture = BackgroundCapture()
+        self.background_capture = BackgroundCapture(width=1280, height=720)
         self.cloak_detector = None
         self.background = None
         self.is_running = False
@@ -150,12 +150,16 @@ class InvisibilityCloak:
         if background.shape[:2] != frame.shape[:2]:
             background = cv2.resize(background, (frame.shape[1], frame.shape[0]))
         
-        # Create invisibility mask
-        invisibility_mask = self.cloak_detector.create_invisibility_mask(frame)
+        # Soft alpha mask for feathered blending
+        alpha = self.cloak_detector.create_alpha_mask(frame)
         
-        # Apply the invisibility effect
-        result = frame.copy()
-        result[invisibility_mask] = background[invisibility_mask]
+        # Expand alpha to 3 channels
+        alpha_3 = np.dstack([alpha, alpha, alpha])
+        inv_alpha_3 = 1.0 - alpha_3
+        
+        # Blend: cloak areas replaced by background using soft edges
+        result = (frame.astype(np.float32) * inv_alpha_3 + background.astype(np.float32) * alpha_3)
+        result = np.clip(result, 0, 255).astype(np.uint8)
         
         return result
     
@@ -202,7 +206,7 @@ class InvisibilityCloak:
         """
         try:
             # Initialize camera
-            self.cap = initialize_camera(self.camera_index)
+            self.cap = initialize_camera(self.camera_index, width=self.width, height=self.height, fps=self.fps_target)
             
             # Try to load existing background
             if not self.load_background():
