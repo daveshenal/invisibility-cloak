@@ -1,21 +1,18 @@
-"""
-Utility functions for the invisibility cloak project.
-
-This module contains helper functions for camera operations,
-image processing, and common utilities used across the project.
-"""
-
 import cv2
 import numpy as np
 from typing import Optional
 
 
-def initialize_camera(camera_index: int = 0) -> Optional[cv2.VideoCapture]:
+def initialize_camera(camera_index: int = 0, *, width: Optional[int] = None,
+                      height: Optional[int] = None, fps: Optional[int] = None) -> Optional[cv2.VideoCapture]:
     """
     Initialize and return a camera capture object.
     
     Args:
         camera_index (int): Index of the camera to use (default: 0)
+        width (Optional[int]): Desired capture width (e.g., 1280, 1920)
+        height (Optional[int]): Desired capture height (e.g., 720, 1080)
+        fps (Optional[int]): Desired frames per second (e.g., 30, 60)
         
     Returns:
         cv2.VideoCapture: Camera capture object if successful, None otherwise
@@ -28,10 +25,17 @@ def initialize_camera(camera_index: int = 0) -> Optional[cv2.VideoCapture]:
     if not cap.isOpened():
         raise RuntimeError(f"Error: Could not open camera at index {camera_index}")
     
-    # Set camera properties for better performance
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    cap.set(cv2.CAP_PROP_FPS, 30)
+    # Set camera properties; default to 640x480@30 if not specified
+    if width is None:
+        width = 640
+    if height is None:
+        height = 480
+    if fps is None:
+        fps = 30
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    cap.set(cv2.CAP_PROP_FPS, fps)
     
     return cap
 

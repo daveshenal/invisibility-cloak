@@ -1,12 +1,9 @@
 """
 Main invisibility cloak application.
 """
-
 import cv2
 import numpy as np
-import os
 import sys
-from typing import Optional
 
 from utils import initialize_camera, release_camera, get_frame, flip_frame, print_instructions
 from cloak_detector import create_detector_for_color, ColorRanges
@@ -21,7 +18,9 @@ class InvisibilityCloak:
     and real-time video processing to create the invisibility effect.
     """
     
-    def __init__(self, cloak_color: str = "green", camera_index: int = 0):
+    def __init__(self, cloak_color: str = "green", camera_index: int = 0,
+                 width: int = 640, height: int = 480, fps: int = 30,
+                 quality: str = "high"):
         """
         Initialize the invisibility cloak application.
         
@@ -31,53 +30,73 @@ class InvisibilityCloak:
         """
         self.camera_index = camera_index
         self.cap = None
-        self.background_capture = BackgroundCapture()
+        self.background_capture = BackgroundCapture(width=1280, height=720)
         self.cloak_detector = None
         self.background = None
         self.is_running = False
+        self.width = width
+        self.height = height
+        self.fps_target = fps
+        self.quality = quality
         
-        # Initialize cloak detector
-        try:
-            self.cloak_detector = create_detector_for_color(cloak_color)
-            print(f"Initialized cloak detector for {cloak_color} color")
-        except ValueError as e:
-            print(f"Error: {e}")
-            print("Available colors: green, blue, red, yellow, purple")
-            sys.exit(1)
+        # Store parameters for later initialization
+        self.cloak_color = cloak_color
+        
+        # Choose smoothing parameters for high quality
+        if quality == "ultra":
+            self.kernel_size = 9
+            self.erosion_iter = 1
+            self.dilation_iter = 2
+            self.min_area = 500
+            self.smooth_kernel = 41
+        elif quality == "high":
+            self.kernel_size = 7
+            self.erosion_iter = 1
+            self.dilation_iter = 1
+            self.min_area = 200
+            self.smooth_kernel = 31
+        elif quality == "medium":
+            self.kernel_size = 5
+            self.erosion_iter = 1
+            self.dilation_iter = 1
+            self.min_area = 100
+            self.smooth_kernel = 21
+        else:
+            self.kernel_size = 5
+            self.erosion_iter = 1
+            self.dilation_iter = 1
+            self.min_area = 0
+            self.smooth_kernel = 15
+        
+        # Initialize cloak detector (without trackbars initially)
+        self.cloak_detector = None
         
         # Performance metrics
         self.frame_count = 0
         self.fps = 0
         self.last_time = cv2.getTickCount()
     
-    def load_background(self, background_path: Optional[str] = None) -> bool:
+
+    
+    def _initialize_cloak_detector(self) -> None:
         """
-        Load a background image for the invisibility effect.
-        
-        Args:
-            background_path (str, optional): Path to background image file.
-                If None, will try to load the most recent background.
-                
-        Returns:
-            bool: True if background was loaded successfully, False otherwise
+        Initialize the cloak detector with trackbars enabled.
+        This is called after background capture to avoid opening HSV window too early.
         """
-        if background_path:
-            # Load specific background file
-            if os.path.exists(background_path):
-                return self.background_capture.load_background(background_path)
-            else:
-                print(f"Error: Background file not found: {background_path}")
-                return False
-        else:
-            # Try to load the most recent background
-            backgrounds = self.background_capture.list_backgrounds()
-            if backgrounds:
-                latest_background = backgrounds[-1]
-                print(f"Loading most recent background: {latest_background}")
-                return self.background_capture.load_background(latest_background)
-            else:
-                print("No background images found. Please capture a background first.")
-                return False
+        try:
+            self.cloak_detector = create_detector_for_color(
+                self.cloak_color,
+                kernel_size=self.kernel_size,
+                erosion_iterations=self.erosion_iter,
+                dilation_iterations=self.dilation_iter,
+                min_component_area=self.min_area,
+                smooth_kernel_size=self.smooth_kernel,
+            )
+            print(f"Initialized cloak detector for {self.cloak_color} color")
+        except ValueError as e:
+            print(f"Error: {e}")
+            print("Available colors: green, blue, red, yellow, purple")
+            sys.exit(1)
     
     def capture_new_background(self) -> bool:
         """
@@ -112,12 +131,20 @@ class InvisibilityCloak:
         if background.shape[:2] != frame.shape[:2]:
             background = cv2.resize(background, (frame.shape[1], frame.shape[0]))
         
-        # Create invisibility mask
-        invisibility_mask = self.cloak_detector.create_invisibility_mask(frame)
+        # Check if cloak detector is initialized
+        if self.cloak_detector is None:
+            return frame
         
-        # Apply the invisibility effect
-        result = frame.copy()
-        result[invisibility_mask] = background[invisibility_mask]
+        # Soft alpha mask for feathered blending
+        alpha = self.cloak_detector.create_alpha_mask(frame)
+        
+        # Expand alpha to 3 channels
+        alpha_3 = np.dstack([alpha, alpha, alpha])
+        inv_alpha_3 = 1.0 - alpha_3
+        
+        # Blend: cloak areas replaced by background using soft edges
+        result = (frame.astype(np.float32) * inv_alpha_3 + background.astype(np.float32) * alpha_3)
+        result = np.clip(result, 0, 255).astype(np.uint8)
         
         return result
     
@@ -147,7 +174,7 @@ class InvisibilityCloak:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         
         # Add instructions
-        cv2.putText(overlay, "Press 'q' to quit, 'b' to capture background", 
+        cv2.putText(overlay, "Press 'q' to quit, 'b' to capture new background", 
                     (10, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 
                     0.5, (255, 255, 255), 1)
         
@@ -164,14 +191,13 @@ class InvisibilityCloak:
         """
         try:
             # Initialize camera
-            self.cap = initialize_camera(self.camera_index)
+            self.cap = initialize_camera(self.camera_index, width=self.width, height=self.height, fps=self.fps_target)
             
-            # Try to load existing background
-            if not self.load_background():
-                print("No background loaded. Capturing new background...")
-                if not self.capture_new_background():
-                    print("Failed to capture background. Exiting.")
-                    return
+            # Always capture new background at start
+            print("Capturing background at startup...")
+            if not self.capture_new_background():
+                print("Failed to capture background. Exiting.")
+                return
             
             # Get background reference
             try:
@@ -180,12 +206,16 @@ class InvisibilityCloak:
                 print("Error: No background available. Exiting.")
                 return
             
+            # Initialize cloak detector after background is captured
+            self._initialize_cloak_detector()
+            
             print("Invisibility cloak is running!")
             print("Controls:")
             print("  'q' - Quit application")
             print("  'b' - Capture new background")
             print("  's' - Save current frame")
             print("  'r' - Reset to default HSV values")
+            print("Note: Background is captured fresh at each startup")
             
             self.is_running = True
             
@@ -220,6 +250,10 @@ class InvisibilityCloak:
                     if self.capture_new_background():
                         try:
                             self.background = self.background_capture.get_background()
+                            # Re-initialize cloak detector for new background
+                            if self.cloak_detector is not None:
+                                self.cloak_detector.cleanup()
+                            self._initialize_cloak_detector()
                             print("New background loaded successfully!")
                         except RuntimeError:
                             print("Failed to load new background.")
@@ -238,9 +272,12 @@ class InvisibilityCloak:
                 
                 elif key == ord('r'):
                     # Reset HSV values to default
-                    default_lower, default_upper = ColorRanges.GREEN
-                    self.cloak_detector.set_hsv_values(default_lower, default_upper)
-                    print("HSV values reset to default.")
+                    if self.cloak_detector is not None:
+                        default_lower, default_upper = ColorRanges.GREEN
+                        self.cloak_detector.set_hsv_values(default_lower, default_upper)
+                        print("HSV values reset to default.")
+                    else:
+                        print("Cloak detector not initialized yet.")
         
         except KeyboardInterrupt:
             print("\nApplication interrupted by user.")
@@ -279,20 +316,26 @@ def main():
                        help="Color of the cloak to detect (default: green)")
     parser.add_argument("--camera", "-cam", type=int, default=0,
                        help="Camera index to use (default: 0)")
-    parser.add_argument("--background", "-b", type=str,
-                       help="Path to background image file")
-    
+    parser.add_argument("--width", type=int, default=1280,
+                       help="Capture width (default: 1280)")
+    parser.add_argument("--height", type=int, default=720,
+                       help="Capture height (default: 720)")
+    parser.add_argument("--fps", type=int, default=30,
+                       help="Capture FPS target (default: 30)")
+    parser.add_argument("--quality", choices=["ultra", "high", "medium", "low"], default="high",
+                       help="Mask smoothing quality (default: high)")
     args = parser.parse_args()
     
     # Create and run the invisibility cloak application
     try:
-        app = InvisibilityCloak(cloak_color=args.color, camera_index=args.camera)
-        
-        # Load background if specified
-        if args.background:
-            if not app.load_background(args.background):
-                print(f"Failed to load background: {args.background}")
-                return
+        app = InvisibilityCloak(
+            cloak_color=args.color,
+            camera_index=args.camera,
+            width=args.width,
+            height=args.height,
+            fps=args.fps,
+            quality=args.quality,
+        )
         
         # Run the application
         app.run()

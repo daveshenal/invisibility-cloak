@@ -12,7 +12,7 @@ class BackgroundCapture:
     and provides methods to load and manage multiple background images.
     """
     
-    def __init__(self, background_dir: str = "backgrounds"):
+    def __init__(self, width: int = 640, height: int = 480, background_dir: str = "backgrounds"):
         """
         Initialize the background capture system.
         
@@ -22,6 +22,8 @@ class BackgroundCapture:
         self.background_dir = background_dir
         self.current_background = None
         self.background_filename = None
+        self.width = width
+        self.height = height
         
         # Create backgrounds directory if it doesn't exist
         self._ensure_background_dir()
@@ -45,7 +47,7 @@ class BackgroundCapture:
         cap = None
         try:
             # Initialize camera
-            cap = initialize_camera(camera_index)
+            cap = initialize_camera(camera_index, width=self.width, height=self.height)
             
             print("Background capture mode:")
             print("1. Position yourself so the background is clearly visible")
