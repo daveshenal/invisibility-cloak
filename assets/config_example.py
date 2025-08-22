@@ -1,3 +1,10 @@
+"""
+Sample configuration file for the invisibility cloak project.
+
+Copy this file to your project root and modify the values as needed.
+You can import this file to customize the cloak detection parameters.
+"""
+
 import numpy as np
 
 # HSV Color Ranges for different cloak colors
@@ -17,7 +24,7 @@ BLUE_CLOAK = {
     'description': 'Standard blue cloth detection'
 }
 
-# Red Cloak (handles both ends of HSV spectrum)
+# Red Cloak
 RED_CLOAK = {
     'lower': np.array([0, 50, 50]),
     'upper': np.array([10, 255, 255]),
