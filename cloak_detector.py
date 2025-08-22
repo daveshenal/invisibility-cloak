@@ -60,6 +60,9 @@ class CloakDetector:
         """Setup trackbars for real-time HSV value adjustment."""
         cv2.namedWindow('HSV Adjustments')
         
+        # Set the window size here
+        cv2.resizeWindow('HSV Adjustments', 400, 270)
+        
         # Create trackbars for each HSV component
         cv2.createTrackbar('H_min', 'HSV Adjustments', self.trackbar_values['H_min'], 179, self._on_h_min_change)
         cv2.createTrackbar('S_min', 'HSV Adjustments', self.trackbar_values['S_min'], 255, self._on_s_min_change)
