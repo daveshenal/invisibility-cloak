@@ -1,5 +1,5 @@
 """
-Sample configuration file for the invisibility cloak project.
+Sample configuration file.
 """
 
 import numpy as np
