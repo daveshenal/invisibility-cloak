@@ -1,3 +1,7 @@
+"""
+Background capture module.
+"""
+
 import cv2
 import numpy as np
 import os
@@ -12,20 +16,24 @@ class BackgroundCapture:
     and provides methods to load and manage multiple background images.
     """
     
-    def __init__(self, width: int = 640, height: int = 480, background_dir: str = "backgrounds"):
+    def __init__(self, background_dir: str = "backgrounds", width: int = 640, height: int = 480, fps: int = 30):
         """
         Initialize the background capture system.
         
         Args:
             background_dir (str): Directory to store background images
+            width (int): Target capture width
+            height (int): Target capture height
+            fps (int): Target capture FPS
         """
         self.background_dir = background_dir
         self.current_background = None
         self.background_filename = None
         self.width = width
         self.height = height
+        self.fps = fps
         
-        # Create backgrounds directory if it doesn't exist
+        # Create backgrounds directory if it doesnt exist
         self._ensure_background_dir()
     
     def _ensure_background_dir(self) -> None:
@@ -47,7 +55,7 @@ class BackgroundCapture:
         cap = None
         try:
             # Initialize camera
-            cap = initialize_camera(camera_index, width=self.width, height=self.height)
+            cap = initialize_camera(camera_index, width=self.width, height=self.height, fps=self.fps)
             
             print("Background capture mode:")
             print("1. Position yourself so the background is clearly visible")
@@ -231,8 +239,8 @@ def main():
     """Main function to run the background capture application."""
     print_instructions()
     
-    # Create background capture instance
-    bg_capture = BackgroundCapture()
+    # Create background capture instance with default resolution
+    bg_capture = BackgroundCapture(width=640, height=480, fps=30)
     
     # List existing backgrounds
     existing_backgrounds = bg_capture.list_backgrounds()
