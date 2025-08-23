@@ -1,6 +1,10 @@
+"""
+Cloak detection and masking module.
+"""
+
 import cv2
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 class CloakDetector:
@@ -13,7 +17,8 @@ class CloakDetector:
     
     def __init__(self, lower_hsv: np.ndarray, upper_hsv: np.ndarray, enable_trackbars: bool = True,
                  kernel_size: int = 5, erosion_iterations: int = 1, dilation_iterations: int = 1,
-                 min_component_area: int = 0, smooth_kernel_size: int = 21):
+                 min_component_area: int = 0, smooth_kernel_size: int = 21,
+                 lower_hsv_2: Optional[np.ndarray] = None, upper_hsv_2: Optional[np.ndarray] = None):
         """
         Initialize the cloak detector with HSV color bounds.
         
@@ -26,10 +31,14 @@ class CloakDetector:
             dilation_iterations (int): Number of dilation passes
             min_component_area (int): Remove components smaller than this area (0 disables)
             smooth_kernel_size (int): Gaussian blur kernel size for soft mask (odd number)
+            lower_hsv_2 (Optional[np.ndarray]): Optional second lower HSV for wrap-around
+            upper_hsv_2 (Optional[np.ndarray]): Optional second upper HSV for wrap-around
         """
         self.lower_hsv = lower_hsv
         self.upper_hsv = upper_hsv
         self.enable_trackbars = enable_trackbars
+        self.lower_hsv_2 = lower_hsv_2
+        self.upper_hsv_2 = upper_hsv_2
         
         # Kernel for morphological operations
         self.kernel_size = max(1, int(kernel_size))
@@ -59,9 +68,6 @@ class CloakDetector:
     def _setup_trackbars(self) -> None:
         """Setup trackbars for real-time HSV value adjustment."""
         cv2.namedWindow('HSV Adjustments')
-        
-        # Set the window size here
-        cv2.resizeWindow('HSV Adjustments', 400, 270)
         
         # Create trackbars for each HSV component
         cv2.createTrackbar('H_min', 'HSV Adjustments', self.trackbar_values['H_min'], 179, self._on_h_min_change)
@@ -118,6 +124,11 @@ class CloakDetector:
         
         # Create mask based on HSV range
         mask = cv2.inRange(hsv, self.lower_hsv, self.upper_hsv)
+        
+        # If a secondary range is provided (hue wrap-around), merge it
+        if self.lower_hsv_2 is not None and self.upper_hsv_2 is not None:
+            mask2 = cv2.inRange(hsv, self.lower_hsv_2, self.upper_hsv_2)
+            mask = cv2.bitwise_or(mask, mask2)
         
         # Apply morphological operations to refine the mask
         refined_mask = self._apply_morphology(mask)
@@ -202,7 +213,8 @@ class CloakDetector:
         """
         return self.lower_hsv.copy(), self.upper_hsv.copy()
     
-    def set_hsv_values(self, lower_hsv: np.ndarray, upper_hsv: np.ndarray) -> None:
+    def set_hsv_values(self, lower_hsv: np.ndarray, upper_hsv: np.ndarray,
+                       lower_hsv_2: Optional[np.ndarray] = None, upper_hsv_2: Optional[np.ndarray] = None) -> None:
         """
         Set new HSV values.
         
@@ -212,6 +224,8 @@ class CloakDetector:
         """
         self.lower_hsv = lower_hsv.copy()
         self.upper_hsv = upper_hsv.copy()
+        self.lower_hsv_2 = lower_hsv_2.copy() if lower_hsv_2 is not None else None
+        self.upper_hsv_2 = upper_hsv_2.copy() if upper_hsv_2 is not None else None
         
         # Update trackbar values
         self.trackbar_values['H_min'] = lower_hsv[0]
@@ -231,7 +245,7 @@ class CloakDetector:
 class ColorRanges:
     """Predefined HSV color ranges for common cloak colors."""
     
-    # Green cloak
+    # Green cloak (most common)
     GREEN = (
         np.array([40, 40, 40]),
         np.array([80, 255, 255])
