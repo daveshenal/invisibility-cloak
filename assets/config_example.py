@@ -1,8 +1,5 @@
 """
-Sample configuration file for the invisibility cloak project.
-
-Copy this file to your project root and modify the values as needed.
-You can import this file to customize the cloak detection parameters.
+Sample configuration file.
 """
 
 import numpy as np
@@ -54,11 +51,11 @@ CUSTOM_CLOAK = {
 
 # Morphological operation settings
 MORPHOLOGY_SETTINGS = {
-    'kernel_size': 5,                      # Size of morphological kernel
-    'erosion_iterations': 1,               # Number of erosion operations
-    'dilation_iterations': 1,              # Number of dilation operations
-    'opening_iterations': 1,               # Number of opening operations
-    'closing_iterations': 1                # Number of closing operations
+    'kernel_size': 5,                  # Size of morphological kernel
+    'erosion_iterations': 1,           # Number of erosion operations
+    'dilation_iterations': 1,          # Number of dilation operations
+    'opening_iterations': 1,           # Number of opening operations
+    'closing_iterations': 1            # Number of closing operations
 }
 
 # Camera settings
@@ -71,16 +68,16 @@ CAMERA_SETTINGS = {
 
 # Performance settings
 PERFORMANCE_SETTINGS = {
-    'enable_fps_display': True,            # Show FPS counter
-    'enable_overlay': True,                # Show information overlay
-    'save_frames': False,                  # Save processed frames
-    'frame_skip': 1                        # Process every Nth frame (1 = all frames)
+    'enable_fps_display': True,        # Show FPS counter
+    'enable_overlay': True,            # Show information overlay
+    'save_frames': False,              # Save processed frames
+    'frame_skip': 1                    # Process every Nth frame (1 = all frames)
 }
 
 # Background settings
 BACKGROUND_SETTINGS = {
-    'auto_resize': True,                   # Automatically resize background to match frame
-    'background_dir': 'backgrounds',       # Directory to store background images
-    'auto_load_latest': True,              # Automatically load most recent background
-    'background_format': 'jpg'             # Format for saved background images
+    'auto_resize': True,               # Automatically resize background to match frame
+    'background_dir': 'backgrounds',   # Directory to store background images
+    'auto_load_latest': True,          # Automatically load most recent background
+    'background_format': 'jpg'         # Format for saved background images
 }
