@@ -67,8 +67,8 @@ UPPER_GREEN = np.array([80, 255, 255])
 
 ```
 invisibility-cloak/
-├── README.md                 # This file
-├── requirements.txt          # Python dependencies
+├── README.md                 
+├── requirements.txt         # Python dependencies
 ├── LICENSE                  # MIT License
 ├── background_capture.py    # Background capture module
 ├── cloak_detector.py        # Cloak detection and masking
